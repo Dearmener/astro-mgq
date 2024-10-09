@@ -1,0 +1,143 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { SITE_TITLE, SITE_DESCRIPTION } from '../../consts';
+import { getCollection } from 'astro:content';
+import FormattedDate from '../../components/FormattedDate.astro';
+
+const posts = (await getCollection('blog')).sort(
+	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+
+// Group posts by category
+const postsByCategory = posts.reduce((acc, post) => {
+	const category = post.data.category || 'Uncategorized';
+	if (!acc[category]) {
+		acc[category] = [];
+	}
+	acc[category].push(post);
+	return acc;
+}, {});
+
+// Get unique categories
+const categories = Object.keys(postsByCategory).sort();
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+		<style>
+			main {
+				width: 960px;
+			}
+			ul {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 2rem;
+				list-style-type: none;
+				margin: 0;
+				padding: 0;
+			}
+			ul li {
+				width: calc(50% - 1rem);
+			}
+			ul li * {
+				text-decoration: none;
+				transition: 0.2s ease;
+			}
+			ul li img {
+				margin-bottom: 0.5rem;
+				border-radius: 12px;
+			}
+			ul li a {
+				display: block;
+			}
+			.title {
+				margin: 0;
+				color: rgb(var(--black));
+				line-height: 1;
+			}
+			.date {
+				margin: 0;
+				color: rgb(var(--gray));
+			}
+			ul li a:hover h4,
+			ul li a:hover .date {
+				color: rgb(var(--accent));
+			}
+			ul a:hover img {
+				box-shadow: var(--box-shadow);
+			}
+			.category {
+				font-weight: bold;
+				margin-top: 2rem;
+				margin-bottom: 1rem;
+			}
+			#search {
+				width: 100%;
+				padding: 0.5rem;
+				margin-bottom: 1rem;
+				font-size: 1rem;
+			}
+			@media (max-width: 720px) {
+				ul {
+					gap: 0.5em;
+				}
+				ul li {
+					width: 100%;
+					text-align: center;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<section>
+				<input type="text" id="search" placeholder="Search posts...">
+				{categories.map((category) => (
+					<div>
+						<h3 class="category">{category}</h3>
+						<ul>
+							{postsByCategory[category].map((post) => (
+								<li>
+									<a href={`/blog/${post.slug}/`}>
+										<img width={720} height={360} src={post.data.heroImage} alt="" />
+										<h4 class="title">{post.data.title}</h4>
+										<p class="date">
+											<FormattedDate date={post.data.pubDate} />
+										</p>
+									</a>
+								</li>
+							))}
+						</ul>
+					</div>
+				))}
+			</section>
+		</main>
+		<Footer />
+		<script>
+			document.addEventListener('DOMContentLoaded', () => {
+				const searchInput = document.getElementById('search');
+				const posts = document.querySelectorAll('li');
+
+				searchInput.addEventListener('input', (e) => {
+					const searchTerm = e.target.value.toLowerCase();
+
+					posts.forEach((post) => {
+						const title = post.querySelector('.title').textContent.toLowerCase();
+						const isVisible = title.includes(searchTerm);
+						post.style.display = isVisible ? '' : 'none';
+					});
+
+					document.querySelectorAll('.category').forEach((category) => {
+						const visiblePosts = category.nextElementSibling.querySelectorAll('li[style=""]');
+						category.style.display = visiblePosts.length ? '' : 'none';
+					});
+				});
+			});
+		</script>
+	</body>
+</html>
